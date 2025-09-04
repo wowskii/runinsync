@@ -13,3 +13,4 @@
 .externalNativeBuild
 .cxx
 local.properties
+/logic_drafts/.env
