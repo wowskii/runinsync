@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
+import androidx.media3.session.MediaSession
 
 
 // 1. Create ViewModel to hold player state
@@ -40,6 +41,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val player: ExoPlayer by lazy {
         ExoPlayer.Builder(getApplication()).build()
     }
+    val mediaSession = MediaSession.Builder(getApplication(), player).build()
 
     // Flag to track if the player is currently prepared with media
     var isPlayerPrepared = false
