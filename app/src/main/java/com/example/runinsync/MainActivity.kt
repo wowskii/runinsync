@@ -45,7 +45,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val mediaSession = MediaSession.Builder(getApplication(), player).build()
 
     // Flag to track if the player is currently prepared with media
-    var isPlayerPrepared = false
+    var isPlayerPrepared by mutableStateOf(false)
         private set // Only allow modification within this ViewModel
 
     /**
@@ -80,8 +80,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         player.addMediaItem(mediaItem)
         if (!isPlayerPrepared) { // If player wasn't prepared, prepare it now
             player.prepare()
-            isPlayerPrepared = true
         }
+        isPlayerPrepared = true
+        Log.d("PlayerViewModel", "Player is now prepared (after adding to playlist): $isPlayerPrepared")
     }
 
     // Call this when you want to start or resume playback
@@ -96,8 +97,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         player.pause()
     }
 
+
     override fun onCleared() {
+        Log.d("PlayerViewModel", "onCleared called, releasing player and media session.")
         player.release()  // Cleanup when ViewModel is destroyed
+        mediaSession.release()
         isPlayerPrepared = false
         super.onCleared()
     }
@@ -203,6 +207,7 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
         }
     }
 }
+
 
 fun playerStateToString(state: Int): String {
     return when (state) {
