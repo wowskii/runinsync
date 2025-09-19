@@ -235,6 +235,7 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 val embeddedTitle = viewModel.player.mediaMetadata.title?.toString()
+                val embeddedArtist = viewModel.player.mediaMetadata.artist?.toString()
                 val finalDisplayTitle = embeddedTitle ?: viewModel.currentTrackDisplayName ?: "No Title Available"
                 var currentPositionMs by remember { mutableStateOf(0L) }
                 val durationMs = viewModel.player.duration // Duration usually doesn't change once loaded
