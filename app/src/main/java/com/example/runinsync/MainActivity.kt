@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.runinsync.ui.theme.RuninsyncTheme
 import android.net.Uri
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
@@ -54,6 +55,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      * @param mediaUri The URI of the media to play (e.g., from a local file).
      */
     fun preparePlayer(mediaUri: Uri) {
+        Log.d("PlayerViewModel", "Preparing player with URI: $mediaUri")
         val mediaItem = MediaItem.fromUri(mediaUri)
         player.setMediaItem(mediaItem) // Set the media item to play
         player.prepare()               // Prepare the player
@@ -114,7 +116,7 @@ class MainActivity : ComponentActivity() {
             val viewModel: PlayerViewModel = viewModels<PlayerViewModel>().value // More explicit way to get it in Activity
             viewModel.preparePlayer(it)
             // Optionally, tell the player to start playing immediately after preparation
-            // viewModel.player.playWhenReady = true
+            viewModel.player.playWhenReady = true
             // Or call viewModel.play() after some user action
         }
     }
@@ -178,7 +180,7 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
                 Text("Select Audio File")
             }
             Spacer(modifier = Modifier.height(20.dp))
-
+            Log.d("AppContent", "Is it prepared? ${viewModel.isPlayerPrepared}")
             if (viewModel.isPlayerPrepared) {
                 Button(onClick = {
                     if (viewModel.player.isPlaying) {
