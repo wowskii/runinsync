@@ -2,6 +2,7 @@ package com.example.runinsync
 
 import android.app.Application
 import android.content.Context
+import android.icu.util.TimeUnit
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.runinsync.ui.theme.RuninsyncTheme
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -27,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +38,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
+import kotlinx.coroutines.delay
+import java.util.Locale
+import java.util.concurrent.TimeUnit as JavaTimeUnit
 
 
 // 1. Create ViewModel to hold player state
@@ -47,6 +53,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     // Flag to track if the player is currently prepared with media
     var isPlayerPrepared by mutableStateOf(false)
         private set // Only allow modification within this ViewModel
+
+
+    var currentTrackDisplayName by mutableStateOf<String?>(null)
+        private set
 
     /**
      * Prepares the player with a single media item.
@@ -66,6 +76,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // if playWhenReady is true or if you explicitly call player.play().
         // You might want to observe player state changes (e.g., Player.STATE_READY)
         // to update UI or take further actions.
+        currentTrackDisplayName = getFileNameFromUri(getApplication(), mediaUri)
     }
 
 
@@ -76,9 +87,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      * @param mediaUri The URI of the media to add.
      */
     fun addMediaItemToPlaylist(mediaUri: Uri) {
+        // You might want to handle display names for playlists differently
+        // e.g., store a list of display names or update currentTrackDisplayName
+        // when the current media item changes in the playlist.
+        // For simplicity, this example only focuses on the single prepared item.
+        if (currentTrackDisplayName == null) { // Only set if not already set by preparePlayer
+            currentTrackDisplayName = getFileNameFromUri(getApplication(), mediaUri)
+        }
+
+        Log.d("PlayerViewModel", "Adding media item to playlist: $mediaUri")
         val mediaItem = MediaItem.fromUri(mediaUri)
         player.addMediaItem(mediaItem)
-        if (!isPlayerPrepared) { // If player wasn't prepared, prepare it now
+        if (!isPlayerPrepared) {
             player.prepare()
         }
         isPlayerPrepared = true
@@ -104,6 +124,23 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         mediaSession.release()
         isPlayerPrepared = false
         super.onCleared()
+        currentTrackDisplayName = null
+    }
+
+    private fun getFileNameFromUri(context: Context, uri: Uri): String? {
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val displayNameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (displayNameIndex != -1) {
+                        return it.getString(displayNameIndex)
+                    }
+                }
+            }
+        }
+        // Fallback for file URIs or if content resolver fails
+        return uri.lastPathSegment
     }
 }
 
@@ -196,9 +233,29 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
                     Text(if (playWhenReady && currentPlaybackState != androidx.media3.common.Player.STATE_IDLE && currentPlaybackState != androidx.media3.common.Player.STATE_ENDED) "Pause" else "Play")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+
+                val embeddedTitle = viewModel.player.mediaMetadata.title?.toString()
+                val finalDisplayTitle = embeddedTitle ?: viewModel.currentTrackDisplayName ?: "No Title Available"
+                var currentPositionMs by remember { mutableStateOf(0L) }
+                val durationMs = viewModel.player.duration // Duration usually doesn't change once loaded
+
+                LaunchedEffect(viewModel.player.isPlaying, viewModel.isPlayerPrepared) {
+                    if (viewModel.isPlayerPrepared && viewModel.player.isPlaying) {
+                        while (true) {
+                            currentPositionMs = viewModel.player.currentPosition
+                            delay(1000) // Update every second
+                        }
+                    }
+                }
+
+                val currentPositionFormatted = formatMillisecondsToMinSec(currentPositionMs)
+                val durationFormatted = formatMillisecondsToMinSec(durationMs)
+
                 Text("Player State: ${playerStateToString(currentPlaybackState)}")
                 Text(if(playWhenReady) "Playing" else "Paused/Stopped")
-
+                Text(finalDisplayTitle)
+                Text("$currentPositionFormatted / $durationFormatted")
+                Text("Playing at BPM: TODO")
             } else {
                 Text("Player not yet prepared. Select an audio file.")
             }
@@ -207,6 +264,25 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
         }
     }
 }
+
+/**
+ * Formats milliseconds into a "MM:SS" or "HH:MM:SS" string.
+ */
+fun formatMillisecondsToMinSec(milliseconds: Long): String {
+    if (milliseconds < 0) return "00:00" // Or handle error appropriately
+
+    val totalSeconds = JavaTimeUnit.MILLISECONDS.toSeconds(milliseconds)
+    val hours = JavaTimeUnit.SECONDS.toHours(totalSeconds)
+    val minutes = JavaTimeUnit.SECONDS.toMinutes(totalSeconds) % 60 // Minutes part of HH:MM:SS or MM:SS
+    val seconds = totalSeconds % 60 // Seconds part
+
+    return if (hours > 0) {
+        String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
+    }
+}
+
 
 
 fun playerStateToString(state: Int): String {
