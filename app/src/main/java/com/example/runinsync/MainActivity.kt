@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -76,7 +77,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // if playWhenReady is true or if you explicitly call player.play().
         // You might want to observe player state changes (e.g., Player.STATE_READY)
         // to update UI or take further actions.
-        currentTrackDisplayName = getFileNameFromUri(getApplication(), mediaUri)
+        currentTrackDisplayName = "${getMetadataFromUri(getApplication(), mediaUri).first} - ${getMetadataFromUri(getApplication(), mediaUri).second}"
     }
 
 
@@ -92,7 +93,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // when the current media item changes in the playlist.
         // For simplicity, this example only focuses on the single prepared item.
         if (currentTrackDisplayName == null) { // Only set if not already set by preparePlayer
-            currentTrackDisplayName = getFileNameFromUri(getApplication(), mediaUri)
+            currentTrackDisplayName = "${getMetadataFromUri(getApplication(), mediaUri).first} - ${getMetadataFromUri(getApplication(), mediaUri).second}"
         }
 
         Log.d("PlayerViewModel", "Adding media item to playlist: $mediaUri")
@@ -141,6 +142,23 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
         // Fallback for file URIs or if content resolver fails
         return uri.lastPathSegment
+    }
+
+    private fun getMetadataFromUri(context: Context, uri: Uri): Pair<String, String> {
+        val filename = getFileNameFromUri(context, uri)
+        if (filename != null) {
+            val stripped = filename.split('-')
+            val title = stripped[0]
+            val artist = if ('(' in stripped[1]) {
+                stripped[1].split('(')[0]
+            } else if ('.' in stripped[1]) {
+                stripped[1].split('.')[0]
+            } else {
+                stripped[1]
+            }
+            return Pair(title, artist)
+        }
+        return Pair("Unknown Title", "Unknown Artist")
     }
 }
 
@@ -236,8 +254,13 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
 
                 val embeddedTitle = viewModel.player.mediaMetadata.title?.toString()
                 val embeddedArtist = viewModel.player.mediaMetadata.artist?.toString()
-                val finalDisplayTitle = embeddedTitle ?: viewModel.currentTrackDisplayName ?: "No Title Available"
-                var currentPositionMs by remember { mutableStateOf(0L) }
+                val finalDisplayTitle = if (embeddedTitle != null && embeddedArtist != null) {
+                    "$embeddedTitle - $embeddedArtist"
+                } else embeddedTitle
+                    ?: (embeddedArtist
+                        ?: viewModel.currentTrackDisplayName
+                            ?: "No Title Available")
+                var currentPositionMs by remember { mutableLongStateOf(0L) }
                 val durationMs = viewModel.player.duration // Duration usually doesn't change once loaded
 
                 LaunchedEffect(viewModel.player.isPlaying, viewModel.isPlayerPrepared) {
