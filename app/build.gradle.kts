@@ -62,4 +62,17 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.session)
+
+    // Retrofit
+    implementation(libs.retrofit) // Use the latest version
+
+    // Gson Converter (or Moshi, or other)
+    implementation(libs.converter.gson) // Use the latest version
+
+    // OkHttp (Retrofit includes it, but you might want to specify it for its BOM or interceptors)
+    implementation(libs.okhttp) // Or use OkHttp BOM
+    implementation(libs.logging.interceptor) // Useful for debugging API calls
+
+    // Kotlin Coroutines (already likely in your project for viewModelScope)
+    implementation(libs.kotlinx.coroutines.android) // Use latest
 }
