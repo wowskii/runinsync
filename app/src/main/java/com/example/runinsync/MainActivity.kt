@@ -42,7 +42,8 @@ import androidx.media3.session.MediaSession
 import kotlinx.coroutines.delay
 import java.util.Locale
 import java.util.concurrent.TimeUnit as JavaTimeUnit
-
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
 // 1. Create ViewModel to hold player state
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -159,6 +160,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             return Pair(title, artist)
         }
         return Pair("Unknown Title", "Unknown Artist")
+    }
+
+    fun fetchSongTempo(title: String, artist: String) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitInstance.api.getTempo(
+                    apiKey = API_KEY,
+                    type = "both",
+                    lookup = "song:$title artist:$artist",
+                    limit = 5
+                )
+            }
+            catch (e: Exception) {
+                Log.e("PlayerViewModel", "Error fetching tempo: ${e.message}", e)
+            }
+        }
     }
 }
 
