@@ -43,6 +43,7 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 import java.util.concurrent.TimeUnit as JavaTimeUnit
 import androidx.lifecycle.viewModelScope
+
 import kotlinx.coroutines.launch
 
 // 1. Create ViewModel to hold player state
@@ -163,10 +164,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun fetchSongTempo(title: String, artist: String) {
+        val apiKeyFromConfig = BuildConfig.API_KEY
+        if (apiKeyFromConfig == "PASTE_YOUR_KEY_HERE" || apiKeyFromConfig.isBlank()) {
+            Log.w("PlayerViewModel", "API_KEY is a placeholder or blank. Please set it in local.properties.")
+            // Optionally, do not proceed with the API call if the key is a placeholder
+            // return
+        }
         viewModelScope.launch {
             try {
                 val response = RetrofitInstance.api.getTempo(
-                    apiKey = API_KEY,
+                    apiKey = apiKeyFromConfig,
                     type = "both",
                     lookup = "song:$title artist:$artist",
                     limit = 5

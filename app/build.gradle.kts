@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -14,6 +16,30 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        android.buildFeatures.buildConfig = true
+        val localPropertiesFile = rootProject.file("local.properties") // Use rootProject.file for better pathing
+        var apiKeyFromProperties: String? = null
+
+        if (localPropertiesFile.exists()) {
+            val properties = Properties()
+            localPropertiesFile.inputStream().use { input ->
+                properties.load(input)
+            }
+            apiKeyFromProperties = properties.getProperty("API_KEY")
+        }
+
+        if (apiKeyFromProperties == null) {
+            // Option 1: Provide a default placeholder (for debug builds, less secure)
+            // apiKeyFromProperties = "YOUR_DEFAULT_DEBUG_API_KEY_PLACEHOLDER"
+            // println("Warning: API_KEY not found in local.properties. Using default.")
+
+            // Option 2: Fail the build if the key is mandatory (recommended for release)
+            throw GradleException("API_KEY not found in local.properties. Please create this file and add the API_KEY property.")
+        }
+
+        // IMPORTANT: The value must be a valid Java String literal, so it needs quotes.
+        buildConfigField("String", "API_KEY", "\"$apiKeyFromProperties\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
