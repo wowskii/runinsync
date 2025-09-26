@@ -7,7 +7,7 @@ import retrofit2.http.Query
 
 
 data class TempoApiResponse (
-    val bpm : Int
+    val tempo : Int
 )
 
 interface TempoApiService {

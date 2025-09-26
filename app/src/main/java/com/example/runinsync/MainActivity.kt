@@ -43,148 +43,11 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 import java.util.concurrent.TimeUnit as JavaTimeUnit
 import androidx.lifecycle.viewModelScope
+import com.example.runinsync.BuildConfig
 
 import kotlinx.coroutines.launch
 
 // 1. Create ViewModel to hold player state
-class PlayerViewModel(application: Application) : AndroidViewModel(application) {
-    val player: ExoPlayer by lazy {
-        ExoPlayer.Builder(getApplication()).build()
-    }
-    val mediaSession = MediaSession.Builder(getApplication(), player).build()
-
-    // Flag to track if the player is currently prepared with media
-    var isPlayerPrepared by mutableStateOf(false)
-        private set // Only allow modification within this ViewModel
-
-
-    var currentTrackDisplayName by mutableStateOf<String?>(null)
-        private set
-
-    /**
-     * Prepares the player with a single media item.
-     * Replaces any existing playlist.
-     *
-     * @param mediaUri The URI of the media to play (e.g., from a local file).
-     */
-    fun preparePlayer(mediaUri: Uri) {
-        Log.d("PlayerViewModel", "Preparing player with URI: $mediaUri")
-        val mediaItem = MediaItem.fromUri(mediaUri)
-        player.setMediaItem(mediaItem) // Set the media item to play
-        player.prepare()               // Prepare the player
-        // player.playWhenReady = true // Optional: Start playback immediately when ready
-        // Or you can call player.play() later
-        isPlayerPrepared = true
-        // Note: Playback will start asynchronously once the player is ready and
-        // if playWhenReady is true or if you explicitly call player.play().
-        // You might want to observe player state changes (e.g., Player.STATE_READY)
-        // to update UI or take further actions.
-        currentTrackDisplayName = "${getMetadataFromUri(getApplication(), mediaUri).first} - ${getMetadataFromUri(getApplication(), mediaUri).second}"
-    }
-
-
-    /**
-     * Adds a media item to the current playlist.
-     * If the player is not yet prepared, this will also prepare it.
-     *
-     * @param mediaUri The URI of the media to add.
-     */
-    fun addMediaItemToPlaylist(mediaUri: Uri) {
-        // You might want to handle display names for playlists differently
-        // e.g., store a list of display names or update currentTrackDisplayName
-        // when the current media item changes in the playlist.
-        // For simplicity, this example only focuses on the single prepared item.
-        if (currentTrackDisplayName == null) { // Only set if not already set by preparePlayer
-            currentTrackDisplayName = "${getMetadataFromUri(getApplication(), mediaUri).first} - ${getMetadataFromUri(getApplication(), mediaUri).second}"
-        }
-
-        Log.d("PlayerViewModel", "Adding media item to playlist: $mediaUri")
-        val mediaItem = MediaItem.fromUri(mediaUri)
-        player.addMediaItem(mediaItem)
-        if (!isPlayerPrepared) {
-            player.prepare()
-        }
-        isPlayerPrepared = true
-        Log.d("PlayerViewModel", "Player is now prepared (after adding to playlist): $isPlayerPrepared")
-    }
-
-    // Call this when you want to start or resume playback
-    fun play() {
-        if (isPlayerPrepared) {
-            player.play()
-        }
-    }
-
-    // Call this to pause playback
-    fun pause() {
-        player.pause()
-    }
-
-
-    override fun onCleared() {
-        Log.d("PlayerViewModel", "onCleared called, releasing player and media session.")
-        player.release()  // Cleanup when ViewModel is destroyed
-        mediaSession.release()
-        isPlayerPrepared = false
-        super.onCleared()
-        currentTrackDisplayName = null
-    }
-
-    private fun getFileNameFromUri(context: Context, uri: Uri): String? {
-        if (uri.scheme == "content") {
-            val cursor = context.contentResolver.query(uri, null, null, null, null)
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    val displayNameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (displayNameIndex != -1) {
-                        return it.getString(displayNameIndex)
-                    }
-                }
-            }
-        }
-        // Fallback for file URIs or if content resolver fails
-        return uri.lastPathSegment
-    }
-
-    private fun getMetadataFromUri(context: Context, uri: Uri): Pair<String, String> {
-        val filename = getFileNameFromUri(context, uri)
-        if (filename != null) {
-            val stripped = filename.split('-')
-            val title = stripped[0]
-            val artist = if ('(' in stripped[1]) {
-                stripped[1].split('(')[0]
-            } else if ('.' in stripped[1]) {
-                stripped[1].split('.')[0]
-            } else {
-                stripped[1]
-            }
-            return Pair(title, artist)
-        }
-        return Pair("Unknown Title", "Unknown Artist")
-    }
-
-    fun fetchSongTempo(title: String, artist: String) {
-        val apiKeyFromConfig = BuildConfig.API_KEY
-        if (apiKeyFromConfig == "PASTE_YOUR_KEY_HERE" || apiKeyFromConfig.isBlank()) {
-            Log.w("PlayerViewModel", "API_KEY is a placeholder or blank. Please set it in local.properties.")
-            // Optionally, do not proceed with the API call if the key is a placeholder
-            // return
-        }
-        viewModelScope.launch {
-            try {
-                val response = RetrofitInstance.api.getTempo(
-                    apiKey = apiKeyFromConfig,
-                    type = "both",
-                    lookup = "song:$title artist:$artist",
-                    limit = 5
-                )
-            }
-            catch (e: Exception) {
-                Log.e("PlayerViewModel", "Error fetching tempo: ${e.message}", e)
-            }
-        }
-    }
-}
 
 
 
@@ -193,16 +56,15 @@ class MainActivity : ComponentActivity() {
 
 
     // Activity Result Launcher for picking an audio file
-    private val pickAudioLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    private val pickAudioLauncher = registerForActivityResult<String, Uri?>(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
         uri?.let {
-            // Get the ViewModel instance
-            val viewModel: PlayerViewModel = viewModels<PlayerViewModel>().value // More explicit way to get it in Activity
             viewModel.preparePlayer(it)
-            // Optionally, tell the player to start playing immediately after preparation
             viewModel.player.playWhenReady = true
-            // Or call viewModel.play() after some user action
         }
     }
+    private val viewModel: PlayerViewModel by viewModels() // Use 'by viewModels()' delegate
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -298,12 +160,17 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
 
                 val currentPositionFormatted = formatMillisecondsToMinSec(currentPositionMs)
                 val durationFormatted = formatMillisecondsToMinSec(durationMs)
+                val tempo : Int = if (embeddedTitle != null && embeddedArtist != null) {
+                    viewModel.fetchSongTempo(embeddedTitle, embeddedArtist)
+                } else {
+                    viewModel.fetchSongTempo(finalDisplayTitle)
+                }
 
                 Text("Player State: ${playerStateToString(currentPlaybackState)}")
                 Text(if(playWhenReady) "Playing" else "Paused/Stopped")
                 Text(finalDisplayTitle)
                 Text("$currentPositionFormatted / $durationFormatted")
-                Text("Playing at BPM: TODO")
+                Text("Playing at BPM: $tempo")
             } else {
                 Text("Player not yet prepared. Select an audio file.")
             }

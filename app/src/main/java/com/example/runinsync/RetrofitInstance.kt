@@ -4,7 +4,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitInstance {
-    private const val BASE_URL = "https://api.getsong.co/" // Replace with your API's base URL
+    private const val BASE_URL = "https://api.getsong.co/"
 
     val api: TempoApiService by lazy {
         Retrofit.Builder()

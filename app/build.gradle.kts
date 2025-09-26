@@ -17,7 +17,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        android.buildFeatures.buildConfig = true
         val localPropertiesFile = rootProject.file("local.properties") // Use rootProject.file for better pathing
         var apiKeyFromProperties: String? = null
 
@@ -39,11 +38,10 @@ android {
         }
 
         // IMPORTANT: The value must be a valid Java String literal, so it needs quotes.
-        buildConfigField("String", "API_KEY", "\"$apiKeyFromProperties\"")
+        buildConfigField("String", "API_KEY", apiKeyFromProperties)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -62,6 +60,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
