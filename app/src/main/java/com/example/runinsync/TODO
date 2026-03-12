@@ -17,10 +17,9 @@ API
     - find out why the response is always 0
 
 Step detection
-    - fix step detection, 0 steps, could be a permission issue as it never asks for the permission
-    on mobile
+    - test accuracy
 
 ________________________________________________________________
 
 branch out a spotify suggestion version of the app
-use sporify SDK/gemini's suggestions for this
+use spotify SDK/gemini's suggestions for this

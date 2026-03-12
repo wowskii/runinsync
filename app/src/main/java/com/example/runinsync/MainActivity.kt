@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaSession
@@ -78,6 +79,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        checkPermissionsAndStartStepCounter()
+
         enableEdgeToEdge()
         setContent {
             RuninsyncTheme {
@@ -150,6 +154,37 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // --- STEP COUNTER DEBUG SECTION ---
+            Column(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxSize(0.3f), // Take some space at the top for debug
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text("--- Pedometer Debug ---")
+
+                // Show if we have permission
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val hasPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context, android.Manifest.permission.ACTIVITY_RECOGNITION
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                } else true
+
+                Text("Permission Granted: $hasPermission")
+                Text("Total Steps this session: ${viewModel.totalStepsDetected}")
+                Text("Current SPM: ${viewModel.currentStepPace}")
+
+                val timeAgo = if (viewModel.lastStepTimestamp > 0) {
+                    "${(System.currentTimeMillis() - viewModel.lastStepTimestamp) / 1000}s ago"
+                } else "Never"
+                Text("Last Step Detected: $timeAgo")
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            androidx.compose.material3.HorizontalDivider()
+            Spacer(modifier = Modifier.height(10.dp))
+
             Button(onClick = onPickAudio) {
                 Text("Select Audio File")
             }
