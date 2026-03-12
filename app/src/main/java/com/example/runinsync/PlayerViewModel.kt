@@ -105,6 +105,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         isPlayerPrepared = false
         super.onCleared()
         currentTrackDisplayName = null
+        stepCounterManager.stop()
     }
 
     private fun getFileNameFromUri(context: Context, uri: Uri): String? {
@@ -176,5 +177,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 songTempo = -1
             }
         }
+    }
+    // In PlayerViewModel.kt
+    private val stepCounterManager = StepCounterManager(getApplication())
+
+    val currentStepPace: Int
+        get() = stepCounterManager.currentSpm
+
+    fun startStepCounter() {
+        stepCounterManager.start()
     }
 }

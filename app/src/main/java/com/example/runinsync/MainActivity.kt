@@ -56,7 +56,16 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
 
-    // Activity Result Launcher for picking an audio file
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission granted, tell the ViewModel to start the step counter
+            viewModel.startStepCounter()
+        } else {
+            Log.d("Permissions", "Activity Recognition permission denied")
+        }
+    }
     private val pickAudioLauncher = registerForActivityResult<String, Uri?>(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -86,6 +95,25 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+    }
+    private fun checkPermissionsAndStartStepCounter() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val permission = android.Manifest.permission.ACTIVITY_RECOGNITION
+            when {
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    this, permission
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                    viewModel.startStepCounter()
+                }
+                else -> {
+                    // Request the permission
+                    requestPermissionLauncher.launch(permission)
+                }
+            }
+        } else {
+            // Older versions don't need runtime permission for this
+            viewModel.startStepCounter()
         }
     }
 }
@@ -169,6 +197,7 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
                 Text(finalDisplayTitle)
                 Text("$currentPositionFormatted / $durationFormatted")
                 Text("Playing at BPM: $tempo")
+                Text("Current Step Pace (SPM): ${viewModel.currentStepPace}")
             } else {
                 Text("Player not yet prepared. Select an audio file.")
             }
