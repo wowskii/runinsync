@@ -6,11 +6,13 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import kotlinx.coroutines.launch
@@ -19,6 +21,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val player: ExoPlayer by lazy {
         ExoPlayer.Builder(getApplication()).build()
     }
+
+    var songTempo by mutableIntStateOf(0)
+        private set
+
     val mediaSession : MediaSession by lazy { MediaSession.Builder(getApplication(), player).build() }
 
     // Flag to track if the player is currently prepared with media
@@ -47,7 +53,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // if playWhenReady is true or if you explicitly call player.play().
         // You might want to observe player state changes (e.g., Player.STATE_READY)
         // to update UI or take further actions.
-        currentTrackDisplayName = "${getMetadataFromUri(getApplication(), mediaUri).first} - ${getMetadataFromUri(getApplication(), mediaUri).second}"
+//        currentTrackDisplayName = "${getMetadataFromUri(getApplication(), mediaUri).first} - ${getMetadataFromUri(getApplication(), mediaUri).second}"
+        val (title, artist) = getMetadataFromUri(getApplication(), mediaUri)
+        triggerTempoFetch(title, artist)
+        currentTrackDisplayName = "$title - $artist"
     }
 
 
@@ -131,32 +140,41 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return Pair("Unknown Title", "Unknown Artist")
     }
 
-    fun fetchSongTempo(title: String, artist: String): Int {
-        val apiKeyFromConfig = BuildConfig.API_KEY
-        var res : Int = -1;
-        if (apiKeyFromConfig == "PASTE_YOUR_KEY_HERE" || apiKeyFromConfig.isBlank()) {
-            Log.w("PlayerViewModel", "API_KEY is a placeholder or blank. Please set it in local.properties.")
-            // Optionally, do not proceed with the API call if the key is a placeholder
-            return -1
+    fun triggerTempoFetch(embeddedTitle: String?, embeddedArtist: String?) {
+        Log.d("PlayerViewModel", "triggerTempoFetch called with title: $embeddedTitle, artist: $embeddedArtist")
+        // 1. Determine the "Fallback" logic inside the ViewModel// If we have both, search by both.
+        // Otherwise, use the title we have, or the filename (currentTrackDisplayName)
+
+        val canSearchByBoth = !embeddedTitle.isNullOrBlank() &&
+                !embeddedArtist.isNullOrBlank() &&
+                embeddedArtist != "Unknown Artist"
+
+        if (canSearchByBoth) {
+            // Search using "both"
+            executeApiCall(title = embeddedTitle, artist = embeddedArtist)
+        } else {
+            // Fallback: Search using only the title or the filename
+            val fallbackQuery = embeddedTitle ?: currentTrackDisplayName ?: "Unknown"
+            executeApiCall(title = fallbackQuery, artist = null)
         }
+    }
+
+    private fun executeApiCall(title: String, artist: String?) {
         viewModelScope.launch {
             try {
+                val isSearchByBoth = artist != null
                 val response = RetrofitInstance.api.getTempo(
-                    apiKey = apiKeyFromConfig,
-                    type = if (artist == "Unknown") "song" else "both",
-                    lookup = if (artist == "Unknown") title else "song:$title artist:$artist",
-                    limit = 5
+                    apiKey = BuildConfig.API_KEY,
+                    type = if (isSearchByBoth) "both" else "song",
+                    lookup = if (isSearchByBoth) "song:$title artist:$artist" else title,
+                    limit = 1
                 )
-                res = response.body()?.tempo ?: -1
-                Log.d("PlayerViewModel", "Tempo fetched: $res")
-            }
-            catch (e: Exception) {
-                Log.e("PlayerViewModel", "Error fetching tempo: ${e.message}", e)
+                if (response.isSuccessful) {
+                    songTempo = response.body()?.tempo ?: -1
+                }
+            } catch (e: Exception) {
+                songTempo = -1
             }
         }
-        return res;
-    }
-    fun fetchSongTempo(title: String): Int {
-        return fetchSongTempo(title, "Unknown")
     }
 }

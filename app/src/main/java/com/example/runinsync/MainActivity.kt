@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -160,11 +161,8 @@ fun AppContent(viewModel: PlayerViewModel, onPickAudio: () -> Unit) {
 
                 val currentPositionFormatted = formatMillisecondsToMinSec(currentPositionMs)
                 val durationFormatted = formatMillisecondsToMinSec(durationMs)
-                val tempo : Int = if (embeddedTitle != null && embeddedArtist != null) {
-                    viewModel.fetchSongTempo(embeddedTitle, embeddedArtist)
-                } else {
-                    viewModel.fetchSongTempo(finalDisplayTitle)
-                }
+
+                val tempo = viewModel.songTempo
 
                 Text("Player State: ${playerStateToString(currentPlaybackState)}")
                 Text(if(playWhenReady) "Playing" else "Paused/Stopped")

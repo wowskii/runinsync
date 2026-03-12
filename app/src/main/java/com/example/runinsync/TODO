@@ -2,8 +2,16 @@ sort out filenames/ titles/artists. DONE
     - case where the file has metadata
     - case where you just deduct it from the filename
 
-link to the API
+link to the API DONE
     - to begin, try simply getting the BPM from the song title/artist, and showing it on the UI
         find out if u can talk to the API directly in kotlin, or else in whatever language u have to
         (python?)
     - figure out where to put the API key
+
+
+recomposition
+    - make sure the API is not called every second DONE
+    - make sure there are no unnecessary calls or actions
+
+API
+    - find out why the response is always 0
