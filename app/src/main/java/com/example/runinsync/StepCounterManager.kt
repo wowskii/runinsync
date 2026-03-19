@@ -14,6 +14,14 @@ class StepCounterManager(context: Context) : SensorEventListener {
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
 
+    public val lastTimestamp: Long
+        get() = stepTimestamps.lastOrNull() ?: 0L
+
+    public val totalSteps: Int
+        get() = stepTimestamps.size
+
+
+
     var currentSpm by mutableIntStateOf(0)
     private val stepTimestamps = mutableListOf<Long>()
 

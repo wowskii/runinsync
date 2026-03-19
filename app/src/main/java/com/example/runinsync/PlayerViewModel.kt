@@ -179,6 +179,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     // In PlayerViewModel.kt
+
+    val totalStepsDetected: Int get() = stepCounterManager.totalSteps
+    val lastStepTimestamp: Long get() = stepCounterManager.lastTimestamp
     private val stepCounterManager = StepCounterManager(getApplication())
 
     val currentStepPace: Int
