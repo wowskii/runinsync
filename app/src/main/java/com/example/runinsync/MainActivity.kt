@@ -15,10 +15,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.runinsync.ui.theme.RuninsyncTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
@@ -68,6 +75,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppContent(viewModel: MainViewModel) {
+    // State that updates every second. AppContent will read it every time it updates, and update itself (useful for time ago)
+    var ticks by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while(true) {
+            delay(1000)
+            ticks++
+        }
+    }
+
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
             modifier = Modifier
@@ -82,6 +98,9 @@ fun AppContent(viewModel: MainViewModel) {
             Text("Total Steps: ${viewModel.totalStepsDetected}")
             Text("Current SPM: ${viewModel.currentStepPace}")
 
+            //this line is essential for the scaffold to update the text
+            Text("Ticks: $ticks")
+            Log.d("Debugging","Last Step Timestamp: ${viewModel.lastStepTimestamp} which is ${System.currentTimeMillis() - viewModel.lastStepTimestamp}ms ago")
             val timeAgo = if (viewModel.lastStepTimestamp > 0) {
                 "${(System.currentTimeMillis() - viewModel.lastStepTimestamp) / 1000}s ago"
             } else "Never"

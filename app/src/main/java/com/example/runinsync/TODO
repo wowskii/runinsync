@@ -21,5 +21,7 @@ Step detection
 
 ________________________________________________________________
 
-branch out a spotify suggestion version of the app
-use spotify SDK/gemini's suggestions for this
+branch out a spotify suggestion version of the app DONE
+use spotify SDK/gemini's suggestions for this DONE
+
+set up spotify Web API to search for songs
