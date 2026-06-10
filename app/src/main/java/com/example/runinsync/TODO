@@ -24,4 +24,7 @@ ________________________________________________________________
 branch out a spotify suggestion version of the app DONE
 use spotify SDK/gemini's suggestions for this DONE
 
-set up spotify Web API to search for songs
+get user's favorite songs
+    - use retrofit to connect to spotify web API and write methods to get songs and recommend more from seed
+    - write, using 3rd party bpm API, methods to filter the songs
+    -
