@@ -16,6 +16,13 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        manifestPlaceholders.putAll(
+            mapOf(
+                "redirectSchemeName" to "com.example.runinsync",
+                "redirectHostName" to "callback"
+            )
+        )
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -55,7 +62,11 @@ dependencies {
     })
     implementation(libs.androidx.appcompat)
     implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
-    implementation("com.google.code.gson:gson:2.14.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+    implementation("com.fasterxml.jackson.core:jackson-annotations:2.15.2")
+    implementation("com.spotify.android:auth:2.1.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

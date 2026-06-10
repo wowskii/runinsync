@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +44,8 @@ import com.spotify.protocol.types.Track;
 
 class MainActivity : AppCompatActivity() {
 
+    private val REQUEST_CODE = 1337
+
     private val clientId = BuildConfig.SPOTIFY_CLIENT_ID
     private val redirectUri = BuildConfig.SPOTIFY_REDIRECT_URI
     private var spotifyAppRemote: SpotifyAppRemote? = null
@@ -67,7 +70,10 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContent {
             RuninsyncTheme {
-                AppContent(viewModel = viewModel)
+                AppContent(
+                    viewModel = viewModel,
+                    onConnectClick = { connectToSpotify() }
+                )
             }
         }
     }
@@ -90,9 +96,44 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        // Set the connection parameters
+    fun connectToSpotify() {
+        val builder = com.spotify.sdk.android.auth.AuthorizationRequest.Builder(
+            clientId,
+            com.spotify.sdk.android.auth.AuthorizationResponse.Type.TOKEN,
+            redirectUri
+        )
+
+        // These scopes are necessary for the App Remote to work
+        builder.setScopes(arrayOf("app-remote-control", "streaming", "playlist-read-private"))
+        val request = builder.build()
+
+        // This opens the Spotify Login Activity
+        com.spotify.sdk.android.auth.AuthorizationClient.openLoginActivity(this, REQUEST_CODE, request)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == REQUEST_CODE) {
+            val response = com.spotify.sdk.android.auth.AuthorizationClient.getResponse(resultCode, data)
+
+            when (response.type) {
+                com.spotify.sdk.android.auth.AuthorizationResponse.Type.TOKEN -> {
+                    // LOGIN SUCCESS! Now that we are authorized, connect the Remote
+                    Log.d("MainActivity", "Auth successful, connecting App Remote...")
+                    actuallyConnectRemote()
+                }
+                com.spotify.sdk.android.auth.AuthorizationResponse.Type.ERROR -> {
+                    Log.e("MainActivity", "Auth error: ${response.error}")
+                }
+                else -> {
+                    Log.e("MainActivity", "Auth result: ${response.type}")
+                }
+            }
+        }
+    }
+
+    private fun actuallyConnectRemote() {
         val connectionParams = ConnectionParams.Builder(clientId)
             .setRedirectUri(redirectUri)
             .showAuthView(true)
@@ -101,21 +142,26 @@ class MainActivity : AppCompatActivity() {
         SpotifyAppRemote.connect(this, connectionParams, object : Connector.ConnectionListener {
             override fun onConnected(appRemote: SpotifyAppRemote) {
                 spotifyAppRemote = appRemote
-                Log.d("MainActivity", "Connected! Yay!")
-                // Now you can start interacting with App Remote
+                Log.d("MainActivity", "SUCCESS: Connected!")
                 connected()
             }
-
             override fun onFailure(throwable: Throwable) {
-                Log.e("MainActivity", throwable.message, throwable)
-                // Something went wrong when attempting to connect! Handle errors here
+                Log.e("MainActivity", "Remote connection failed: ${throwable.message}")
             }
         })
     }
 
     private fun connected() {
-    // Play a playlist
+        Log.d("MainActivity", "Attempting to play playlist...")
+        // Play a playlist
         spotifyAppRemote?.playerApi?.play("spotify:playlist:37i9dQZF1DX2sUQwD7tbmL")
+            ?.setResultCallback {
+                Log.d("MainActivity", "Play command accepted!")
+            }
+            ?.setErrorCallback { throwable ->
+                // This is where you will see the REAL error
+                Log.e("MainActivity", "Playback failed: ${throwable.message}")
+            }
     }
 
     override fun onStop() {
@@ -124,7 +170,7 @@ class MainActivity : AppCompatActivity() {
 }
 
 @Composable
-fun AppContent(viewModel: MainViewModel) {
+fun AppContent(viewModel: MainViewModel, onConnectClick: () -> Unit) {
     // State that updates every second. AppContent will read it every time it updates, and update itself (useful for time ago)
     var ticks by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
@@ -150,11 +196,14 @@ fun AppContent(viewModel: MainViewModel) {
 
             //this line is essential for the scaffold to update the text
             Text("Ticks: $ticks")
-            Log.d("Debugging","Last Step Timestamp: ${viewModel.lastStepTimestamp} which is ${System.currentTimeMillis() - viewModel.lastStepTimestamp}ms ago")
+            //Log.d("Debugging","Last Step Timestamp: ${viewModel.lastStepTimestamp} which is ${System.currentTimeMillis() - viewModel.lastStepTimestamp}ms ago")
             val timeAgo = if (viewModel.lastStepTimestamp > 0) {
                 "${(System.currentTimeMillis() - viewModel.lastStepTimestamp) / 1000}s ago"
             } else "Never"
             Text("Last Step: $timeAgo")
+            Button(onClick = { onConnectClick() }) {
+                Text("Connect to Spotify")
+            }
         }
     }
 }
