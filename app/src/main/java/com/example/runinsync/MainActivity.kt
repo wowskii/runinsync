@@ -104,7 +104,12 @@ class MainActivity : AppCompatActivity() {
         )
 
         // These scopes are necessary for the App Remote to work
-        builder.setScopes(arrayOf("app-remote-control", "streaming", "playlist-read-private"))
+        builder.setScopes(arrayOf(
+            "app-remote-control",
+            "streaming",
+            "playlist-read-private",
+            "user-read-private",
+            "user-read-email"))
         val request = builder.build()
 
         // This opens the Spotify Login Activity
@@ -120,7 +125,9 @@ class MainActivity : AppCompatActivity() {
             when (response.type) {
                 com.spotify.sdk.android.auth.AuthorizationResponse.Type.TOKEN -> {
                     // LOGIN SUCCESS! Now that we are authorized, connect the Remote
+                    val token = response.accessToken
                     Log.d("MainActivity", "Auth successful, connecting App Remote...")
+                    viewModel.fetchSpotifyUser(token)
                     actuallyConnectRemote()
                 }
                 com.spotify.sdk.android.auth.AuthorizationResponse.Type.ERROR -> {
@@ -204,6 +211,7 @@ fun AppContent(viewModel: MainViewModel, onConnectClick: () -> Unit) {
             Button(onClick = { onConnectClick() }) {
                 Text("Connect to Spotify")
             }
+            Text("Username: ${viewModel.spotifyUser}")
         }
     }
 }
