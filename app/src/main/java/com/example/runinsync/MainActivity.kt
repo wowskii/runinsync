@@ -109,7 +109,8 @@ class MainActivity : AppCompatActivity() {
             "streaming",
             "playlist-read-private",
             "user-read-private",
-            "user-read-email"))
+            "user-read-email",
+            "user-top-read"))
         val request = builder.build()
 
         // This opens the Spotify Login Activity
@@ -128,6 +129,7 @@ class MainActivity : AppCompatActivity() {
                     val token = response.accessToken
                     Log.d("MainActivity", "Auth successful, connecting App Remote...")
                     viewModel.fetchSpotifyUser(token)
+                    viewModel.fetchTopTracks(token)
                     actuallyConnectRemote()
                 }
                 com.spotify.sdk.android.auth.AuthorizationResponse.Type.ERROR -> {
@@ -212,6 +214,7 @@ fun AppContent(viewModel: MainViewModel, onConnectClick: () -> Unit) {
                 Text("Connect to Spotify")
             }
             Text("Username: ${viewModel.spotifyUser}")
+            Text("Top tracks: ${viewModel.topTracks}")
         }
     }
 }

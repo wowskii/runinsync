@@ -8,9 +8,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import kotlin.math.sqrt
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     var spotifyUser by mutableStateOf<SpotifyUser?>(null)
+    var topTracks by mutableStateOf<UserTopTracksResponse?>(null)
     var errorMessage by mutableStateOf<String?>(null)
 
     private val stepCounterManager = StepCounterManager(application)
@@ -36,6 +38,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 errorMessage = e.message
                 Log.e("MainViewModel", "Failed to get user", e)
+            }
+        }
+    }
+
+    fun fetchTopTracks(accessToken: String) {
+        viewModelScope.launch {
+            try {
+                val response = SpotifyApi.retrofitService.getTopTracks("Bearer $accessToken")
+                topTracks = response
+                //Log.d("MainViewModel", "Top Tracks: $topTracks")
+            } catch (e: Exception) {
+                errorMessage = e.message
+                Log.e("MainViewModel", "Failed to get top tracks", e)
             }
         }
     }

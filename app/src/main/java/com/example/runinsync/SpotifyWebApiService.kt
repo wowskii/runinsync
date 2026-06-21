@@ -64,4 +64,13 @@ data class Album(
 
 data class UserTopTracksResponse(
     val items: List<Track>
-)
+) {
+    override fun toString(): String {
+        if (items.isEmpty()) return "No tracks found."
+
+        // This joins each track into a new line with a bullet point
+        return items.joinToString(separator = "\n") { track ->
+            "• ${track.name} by ${track.artists.joinToString { it.name }}"
+        }
+    }
+}
